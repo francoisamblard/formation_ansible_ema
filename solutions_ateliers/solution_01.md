@@ -21,7 +21,7 @@ Notez la version d’Ansible.
 `ansible [core 2.17.9]`
 
 Déconnectez-vous et supprimez la VM.  
-`exit`
+`exit`  
 `vagrant destroy -f ubuntu`
 
 # Exercice 2
