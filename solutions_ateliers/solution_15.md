@@ -3,7 +3,7 @@
 ## Playbook `chrony-01.yml`
 
 ```
----  # Playbook 1: chrony-01.yml
+---  # chrony-01.yml
 - name: Install and configure Chrony
   hosts: all
   become: yes
@@ -26,6 +26,12 @@
         state: present
       when: ansible_os_family == "Suse"
 
+    - name: Ensure /etc/chrony directory exists
+      file:
+        name: /etc/chrony
+        state: directory
+      when: ansible_os_family in ["RedHat", "Suse"]
+
     - name: Deploy Chrony configuration
       copy:
         dest: /etc/chrony/chrony.conf
@@ -39,32 +45,48 @@
           rtcsync
           logdir /var/log/chrony
       notify: Restart chronyd
-
   handlers:
     - name: Restart chronyd
       service:
-        name: chronyd
+        name: "{{ 'chronyd' if ansible_os_family in ['RedHat', 'Suse'] else 'chrony' }}"
         state: restarted
+
+    - name: Check Chrony status
+      command: chronyc tracking
+      register: chrony_status
+      changed_when: false
+      failed_when: chrony_status.rc != 0
+
+    - name: Display Chrony status
+      debug:
+        var: chrony_status.stdout
 ...
 ```
 
 ## Playbook `chrony-02.yml`
 
 ```
----  # Playbook 2: chrony-02.yml
+---  # chrony-02.yml
 - name: Install and configure Chrony
   hosts: all
   become: yes
   vars:
     chrony_package: "chrony"
-    chrony_service: "chronyd"
+    chrony_service: "{{ 'chronyd' if ansible_os_family in ['RedHat', 'Suse'] else 'chrony' }}"
     chrony_confdir: "/etc/chrony/chrony.conf"
+
   tasks:
     - name: Install Chrony
       package:
         name: "{{ chrony_package }}"
         state: present
-    
+
+    - name: Ensure /etc/chrony directory exists
+      file:
+        path: /etc/chrony
+        state: directory
+      when: ansible_os_family in ['RedHat', 'Suse']
+
     - name: Deploy Chrony configuration
       copy:
         dest: "{{ chrony_confdir }}"
